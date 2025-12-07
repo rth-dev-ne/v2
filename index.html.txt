@@ -1,0 +1,699 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cân Bằng Chiếc Cân</title>
+    <!-- Element SDK scripts (kept for environment compatibility) -->
+    <script src="/_sdk/element_sdk.js"></script>
+    <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+    <!-- Tailwind CSS CDN for styling -->
+    <script src="https://cdn.tailwindcss.com" type="text/javascript"></script>
+    
+    <style>
+      /* Global Reset and Background */
+      body {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100vh;
+        font-family: 'Inter', sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        /* Allow content to scroll if necessary, but try to fit vertically */
+        overflow-y: auto; 
+      }
+
+      html {
+        height: 100%;
+        width: 100%;
+      }
+
+      .game-container {
+        width: 100%;
+        min-height: 100vh; /* Use min-height to ensure background covers even with overflow */
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 10px; /* Reduced padding for more vertical space */
+        box-sizing: border-box;
+        position: relative;
+      }
+
+      /* Control Panel (New structure for vertical flow) */
+      .control-panel {
+        width: 100%;
+        max-width: 500px; /* Max width for readability on desktop */
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin-bottom: 10px;
+        gap: 8px;
+      }
+      
+      .header-row {
+          display: flex;
+          justify-content: space-between;
+          width: 100%;
+          align-items: center;
+      }
+
+      .game-title {
+        font-size: 32px; /* Smaller title for vertical screen */
+        font-weight: bold;
+        color: white;
+        text-align: center;
+        text-shadow: 3px 3px 6px rgba(0,0,0,0.3);
+        flex-grow: 1;
+        margin: 0 10px;
+      }
+
+      .score-board {
+        background: rgba(255, 255, 255, 0.3);
+        padding: 8px 15px;
+        border-radius: 12px;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+      }
+
+      .score-text {
+        font-size: 16px; 
+        font-weight: bold;
+        color: white;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        margin: 0;
+      }
+
+      .score-number {
+        font-size: 24px;
+        color: #FFD700;
+      }
+
+      .reset-button {
+        background: rgba(255, 100, 100, 0.9);
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 12px;
+        font-size: 16px;
+        font-weight: bold;
+        cursor: pointer;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        transition: all 0.2s ease;
+      }
+
+      .reset-button:hover {
+        background: rgba(255, 80, 80, 1);
+        transform: scale(1.05);
+      }
+
+      /* Weight Table (Placed in the flow, centered) */
+      .weight-table {
+        background: rgba(255, 255, 255, 0.95);
+        padding: 15px;
+        border-radius: 15px;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+        width: 95%; 
+        max-width: 450px;
+        margin: 5px 0; /* Reduced margin */
+        font-size: 14px;
+        line-height: 1.6;
+      }
+
+      .weight-table h3 {
+        margin: 0 0 10px 0;
+        color: #764ba2;
+        font-size: 16px;
+        font-weight: bold;
+        text-align: center;
+        border-bottom: 2px solid #ddd;
+        padding-bottom: 8px;
+      }
+      
+      .weight-rule {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: #f8f8f8;
+        padding: 5px 10px;
+        border-radius: 8px;
+        margin-bottom: 5px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        font-weight: 500;
+        color: #333;
+      }
+      
+      .weight-rule-primary {
+          background: #eaf1ff;
+          font-weight: bold;
+          color: #4338ca;
+      }
+      
+      .weight-rule:last-child {
+          margin-bottom: 0;
+      }
+
+      /* Scale Component - Optimized for middle section */
+      .scale-container {
+        flex-shrink: 0; /* Prevent scale from shrinking too much */
+        width: 100%;
+        max-width: 500px; /* Limit horizontal size */
+        height: 250px; /* Reduced height for tighter vertical layout */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        margin: 5px 0; /* Reduced margin */
+      }
+
+      .scale {
+        width: 90%; 
+        height: 100%;
+        position: relative;
+        transition: transform 0.5s ease;
+      }
+
+      .scale-base {
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 15px; /* Smaller base */
+        height: 100px; 
+        background: linear-gradient(180deg, #8B4513 0%, #654321 100%);
+        border-radius: 10px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+      }
+
+      .scale-beam {
+        position: absolute;
+        bottom: 80px; /* Lower beam */
+        left: 50%;
+        transform: translateX(-50%);
+        width: 100%;
+        height: 10px; /* Thinner beam */
+        background: linear-gradient(90deg, #C0C0C0 0%, #A9A9A9 100%);
+        border-radius: 5px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        transition: transform 0.5s ease;
+        transform-origin: center;
+      }
+
+      .scale-pan {
+        position: absolute;
+        bottom: 10px; /* Closer to the bottom of the container */
+        width: 120px; /* Smaller pan for narrow screen */
+        height: 120px; 
+        background: rgba(255, 255, 255, 0.3);
+        border: 3px solid rgba(255, 255, 255, 0.6);
+        border-radius: 15px;
+        backdrop-filter: blur(5px);
+        box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+        transition: all 0.5s ease;
+        display: flex;
+        flex-wrap: wrap;
+        align-content: flex-start;
+        padding: 5px;
+        box-sizing: border-box;
+      }
+
+      .scale-pan-left {
+        left: 0;
+      }
+
+      .scale-pan-right {
+        right: 0;
+      }
+
+      /* Items and Item Bar */
+      .item {
+        font-size: 30px; /* Smaller items */
+        width: 35px;
+        height: 35px;
+        cursor: grab;
+        user-select: none;
+        touch-action: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      
+      .item-bar {
+        display: flex;
+        gap: 10px; /* Reduced gap */
+        padding: 15px;
+        background: rgba(255, 255, 255, 0.25);
+        border-radius: 15px;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+        flex-wrap: wrap;
+        justify-content: center;
+        width: 95%;
+        max-width: 450px;
+        margin: 10px 0 20px 0;
+      }
+
+      .message {
+        font-size: 24px;
+        color: white;
+        text-align: center;
+        margin: 10px 0;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        min-height: 30px;
+        font-weight: bold;
+      }
+      
+      /* New style for disabled items */
+      .item-disabled {
+          opacity: 0.3;
+          cursor: not-allowed;
+          filter: grayscale(100%);
+          pointer-events: none; /* Crucial: prevents drag start */
+      }
+      
+      /* Other styles (clone, celebration) remain largely the same */
+      .item-clone {
+        font-size: 30px;
+        position: fixed;
+        pointer-events: none;
+        z-index: 9999;
+        opacity: 0.8;
+      }
+      
+      /* Media query for very small screens */
+      @media (max-width: 400px) {
+          .game-title {
+            font-size: 24px;
+          }
+          .score-board {
+              padding: 6px 10px;
+          }
+          .score-number {
+              font-size: 20px;
+          }
+          .item {
+              font-size: 25px;
+              width: 30px;
+              height: 30px;
+          }
+          .scale-pan {
+              width: 100px;
+              height: 100px;
+          }
+      }
+    </style>
+    <style>@view-transition { navigation: auto; }</style>
+  </head>
+  <body>
+    <main class="game-container">
+      
+      <!-- CONTROL PANEL: Now stacked vertically at the top -->
+      <div class="control-panel">
+          <div class="header-row">
+            <button class="reset-button" id="resetButton">🔄 LÀM LẠI</button>
+            <h1 class="game-title" id="gameTitle">⚖️ CÂN BẰNG CHIẾC CÂN</h1>
+            <div class="score-board">
+              <p class="score-text">Điểm: <span class="score-number" id="scoreDisplay">0</span></p>
+            </div>
+          </div>
+      </div>
+      
+      <!-- WEIGHT TABLE: Updated to show comparative weights -->
+      <div class="weight-table">
+        <h3>📊 Bảng So Sánh Trọng Lượng</h3>
+        <div class="weight-rule weight-rule-primary">1 ✏️ (Viết) = 2 🧼 (Gôm)</div>
+        <div class="weight-rule">1 🍎 (Táo) = 2 ✏️</div>
+        <div class="weight-rule">1 🍌 (Chuối) = 1 🍎 + 1 🧼</div>
+        <div class="weight-rule">1 📓 (Vở) = 3 🍎</div>
+        <div class="weight-rule">1 📕 (Sách) = 3 🍎 + 1 ✏️</div>
+        <div class="weight-rule">1 🧱 (Gạch) = 2 📓</div>
+      </div>
+      
+      <!-- MESSAGE AREA -->
+      <p class="message" id="message"></p>
+      
+      <!-- SCALE CONTAINER: Centered in the middle section -->
+      <div class="scale-container">
+        <div class="scale" id="scale">
+          <div class="scale-base"></div>
+          <div class="scale-beam" id="scaleBeam"></div>
+          <div class="scale-pan scale-pan-left" id="leftPan"></div>
+          <div class="scale-pan scale-pan-right" id="rightPan"></div>
+        </div>
+      </div>
+      
+      <!-- ITEM BAR: At the very bottom -->
+      <div class="item-bar" id="itemBar">
+        <div class="item" data-type="apple" draggable="false">🍎</div>
+        <div class="item" data-type="pen" draggable="false">✏️</div>
+        <div class="item" data-type="banana" draggable="false">🍌</div>
+        <div class="item" data-type="eraser" draggable="false">🧼</div>
+        <div class="item" data-type="notebook" draggable="false">📓</div>
+        <div class="item" data-type="book" draggable="false">📕</div>
+        <div class="item" data-type="brick" draggable="false">🧱</div>
+      </div>
+    </main>
+    <div class="confetti-container" id="confettiContainer"></div>
+    <script>
+      // NOTE: The game logic MUST still use numeric weights internally for accurate calculation.
+      
+      const defaultConfig = {
+        game_title: "⚖️ CÂN BẰNG CHIẾC CÂN",
+        reset_button_text: "🔄 LÀM LẠI"
+      };
+
+      // Weight system (in internal units, 1 pen = 1 unit)
+      const weights = {
+        pen: 1,      // ✏️ = 1
+        eraser: 0.5, // 🧼 = 0.5 (2 🧼 = ✏️)
+        apple: 2,    // 🍎 = 2 ✏️
+        banana: 2.5, // 🍌 = 1 🍎 + 1 🧼 = 2.5
+        notebook: 6, // 📓 = 3 🍎 = 6
+        book: 7,     // 📕 = 3 🍎 + 1 ✏️ = 7
+        brick: 12    // 🧱 = 2 📓 = 12
+      };
+
+      const itemEmojis = {
+        apple: '🍎',
+        pen: '✏️',
+        banana: '🍌',
+        eraser: '🧼',
+        notebook: '📓',
+        book: '📕',
+        brick: '🧱'
+      };
+
+      const congratulations = [
+        "Tuyệt lắm!",
+        "Bạn cân giỏi quá!",
+        "Chuẩn chỉnh luôn!",
+        "Hoàn hảo!",
+        "Tài giỏi quá đi!",
+        "Xuất sắc!"
+      ];
+
+      let score = 0;
+      let leftItems = [];
+      let rightItems = [];
+      let draggedElement = null;
+      let cloneElement = null;
+      let isBalanced = false;
+
+      function updateScore() {
+        document.getElementById('scoreDisplay').textContent = score;
+      }
+
+      function calculateWeight(items) {
+        return items.reduce((sum, item) => sum + weights[item], 0);
+      }
+
+      /**
+       * Checks the current weights on both pans and updates the visual scale.
+       */
+      function checkBalance() {
+        const leftWeight = calculateWeight(leftItems);
+        const rightWeight = calculateWeight(rightItems);
+        const difference = leftWeight - rightWeight;
+
+        const scaleBeam = document.getElementById('scaleBeam');
+        const leftPan = document.getElementById('leftPan');
+        const rightPan = document.getElementById('rightPan');
+
+        // Check for balance (small tolerance for floating point errors)
+        if (Math.abs(difference) < 0.01) {
+          // Balanced!
+          scaleBeam.style.transform = 'translateX(-50%) rotate(0deg)';
+          leftPan.style.transform = 'translateY(0)';
+          rightPan.style.transform = 'translateY(0)';
+          
+          if (!isBalanced) {
+            isBalanced = true;
+            score++;
+            updateScore();
+            showCelebration();
+            
+            setTimeout(() => {
+              nextRound();
+            }, 1500);
+          }
+        } else {
+          isBalanced = false;
+          // Calculate angle: small difference = small angle (max 15 degrees)
+          const angle = Math.min(Math.max(difference * 2, -15), 15);
+          scaleBeam.style.transform = `translateX(-50%) rotate(${angle}deg)`;
+          // Adjust pan height based on angle (pan moves down on the heavier side)
+          leftPan.style.transform = `translateY(${angle * 2}px)`;
+          rightPan.style.transform = `translateY(${-angle * 2}px)`;
+          
+          if (rightItems.length > 0) {
+            document.getElementById('message').textContent = "Chưa đúng rồi, thử lại nhé!";
+          } else {
+            document.getElementById('message').textContent = "";
+          }
+        }
+      }
+
+      function showCelebration() {
+        const message = congratulations[Math.floor(Math.random() * congratulations.length)];
+        document.getElementById('message').textContent = message;
+
+        // Simple text celebration overlay
+        const celebrationText = document.createElement('div');
+        celebrationText.className = 'celebration-text';
+        celebrationText.textContent = `🎉 ${message}`;
+        document.body.appendChild(celebrationText);
+
+        setTimeout(() => {
+          celebrationText.remove();
+        }, 1200);
+
+        // Confetti effect
+        const confettiContainer = document.getElementById('confettiContainer');
+        const colors = ['#FFD700', '#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F7DC6F', '#BB8FCE'];
+
+        for (let i = 0; i < 40; i++) {
+          const confetti = document.createElement('div');
+          confetti.className = 'confetti';
+          confetti.style.left = Math.random() * 100 + '%';
+          confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+          confetti.style.animationDelay = Math.random() * 0.3 + 's';
+          confetti.style.animationDuration = (Math.random() * 2 + 2) + 's';
+          confettiContainer.appendChild(confetti);
+
+          setTimeout(() => {
+            confetti.remove();
+          }, 3000);
+        }
+      }
+
+      /**
+       * Renders the items currently in a pan and attaches click listeners for the right pan (removal).
+       */
+      function renderPan(panId, items) {
+        const pan = document.getElementById(panId);
+        // Clear all existing items
+        pan.innerHTML = ''; 
+
+        items.forEach((itemType, index) => {
+          const itemDiv = document.createElement('div');
+          itemDiv.className = 'item';
+          itemDiv.textContent = itemEmojis[itemType];
+          itemDiv.dataset.type = itemType;
+          itemDiv.dataset.index = index;
+          
+          // Random position within pan for visual cluster effect
+          const randomX = Math.random() * 20 - 10;
+          const randomY = Math.random() * 20 - 10;
+          itemDiv.style.transform = `translate(${randomX}px, ${randomY}px)`;
+          
+          if (panId === 'rightPan') {
+            itemDiv.style.cursor = 'pointer';
+            itemDiv.title = 'Bấm để gỡ bỏ';
+            itemDiv.addEventListener('click', () => removeFromRight(index));
+          }
+          
+          pan.appendChild(itemDiv);
+        });
+      }
+
+      function removeFromRight(index) {
+        rightItems.splice(index, 1);
+        renderPan('rightPan', rightItems);
+        checkBalance();
+      }
+
+      /**
+       * Updates availability of items in the item bar based on items on the left pan.
+       */
+      function updateItemBar(itemsToDisable = []) {
+        const itemBar = document.getElementById('itemBar');
+        const allItems = itemBar.querySelectorAll('.item');
+        
+        // Convert the list of items on the left to a Set for faster lookup
+        const disabledSet = new Set(itemsToDisable);
+
+        allItems.forEach(itemEl => {
+          const itemType = itemEl.dataset.type;
+          
+          // Check if this item type is currently on the left pan
+          if (disabledSet.has(itemType)) {
+            itemEl.classList.add('item-disabled');
+            itemEl.title = 'Vật phẩm này đang ở đĩa cân bên trái, không thể sử dụng để cân bằng.';
+          } else {
+            itemEl.classList.remove('item-disabled');
+            itemEl.title = 'Kéo thả vào đĩa cân bên phải';
+          }
+        });
+      }
+
+      /**
+       * Sets up the next round with random items on the left pan.
+       */
+      function nextRound() {
+        leftItems = [];
+        rightItems = [];
+        isBalanced = false;
+
+        // Generate random left side items (1-3 items)
+        const itemTypes = Object.keys(weights); 
+        const numItems = Math.floor(Math.random() * 3) + 1; 
+
+        for (let i = 0; i < numItems; i++) {
+          const randomItem = itemTypes[Math.floor(Math.random() * itemTypes.length)];
+          leftItems.push(randomItem);
+        }
+
+        // Identify items that are on the left pan to disable them in the item bar
+        const itemsToDisable = Array.from(new Set(leftItems));
+
+        renderPan('leftPan', leftItems);
+        renderPan('rightPan', rightItems);
+        updateItemBar(itemsToDisable); 
+        checkBalance();
+        document.getElementById('message').textContent = "";
+      }
+
+      function resetRound() {
+        rightItems = [];
+        renderPan('rightPan', rightItems);
+        // Re-apply disabled state based on the current left pan setup
+        const itemsToDisable = Array.from(new Set(leftItems));
+        updateItemBar(itemsToDisable); 
+        checkBalance();
+      }
+
+      function startDrag(e) {
+        e.preventDefault();
+
+        let target = e.target;
+        while (target && !target.classList.contains('item')) {
+          target = target.parentElement;
+        }
+
+        // Check if the item is disabled before starting drag
+        if (!target || !target.dataset.type || target.classList.contains('item-disabled')) return; 
+
+        draggedElement = target;
+
+        // Create and position clone element
+        cloneElement = document.createElement('div');
+        cloneElement.className = 'item-clone';
+        cloneElement.textContent = target.textContent;
+        document.body.appendChild(cloneElement);
+
+        const clientX = e.type.startsWith('touch') ? e.touches[0].clientX : e.clientX;
+        const clientY = e.type.startsWith('touch') ? e.touches[0].clientY : e.clientY;
+
+        // Position clone center on cursor
+        cloneElement.style.left = (clientX - 15) + 'px';
+        cloneElement.style.top = (clientY - 15) + 'px';
+
+        document.addEventListener('mousemove', drag);
+        document.addEventListener('mouseup', endDrag);
+        document.addEventListener('touchmove', drag, { passive: false }); // Use passive: false for touchmove
+        document.addEventListener('touchend', endDrag);
+      }
+
+      function drag(e) {
+        if (!cloneElement) return;
+        if (e.type === 'touchmove') e.preventDefault(); // Prevent scrolling while dragging
+
+        const clientX = e.type.startsWith('touch') ? e.touches[0].clientX : e.clientX;
+        const clientY = e.type.startsWith('touch') ? e.touches[0].clientY : e.clientY;
+
+        cloneElement.style.left = (clientX - 15) + 'px';
+        cloneElement.style.top = (clientY - 15) + 'px';
+      }
+
+      function endDrag(e) {
+        if (!cloneElement || !draggedElement) return;
+
+        // Remove drag listeners
+        document.removeEventListener('mousemove', drag);
+        document.removeEventListener('mouseup', endDrag);
+        document.removeEventListener('touchmove', drag, { passive: false });
+        document.removeEventListener('touchend', endDrag);
+
+        const clientX = e.type.startsWith('touch') ? e.changedTouches[0].clientX : e.clientX;
+        const clientY = e.type.startsWith('touch') ? e.changedTouches[0].clientY : e.clientY;
+
+        const rightPan = document.getElementById('rightPan');
+        const panRect = rightPan.getBoundingClientRect();
+
+        // Check if item was dropped inside the right pan area
+        if (
+          clientX >= panRect.left &&
+          clientX <= panRect.right &&
+          clientY >= panRect.top &&
+          clientY <= panRect.bottom
+        ) {
+          rightItems.push(draggedElement.dataset.type);
+          renderPan('rightPan', rightItems);
+          checkBalance();
+        }
+
+        cloneElement.remove();
+        cloneElement = null;
+        draggedElement = null;
+      }
+
+      // Event listeners for drag/drop
+      document.getElementById('itemBar').addEventListener('mousedown', startDrag);
+      document.getElementById('itemBar').addEventListener('touchstart', startDrag);
+
+      document.getElementById('resetButton').addEventListener('click', resetRound);
+
+      // Element SDK Integration
+      async function onConfigChange(config) {
+        const title = config.game_title || defaultConfig.game_title;
+        const resetText = config.reset_button_text || defaultConfig.reset_button_text;
+
+        document.getElementById('gameTitle').textContent = title;
+        document.getElementById('resetButton').textContent = resetText;
+      }
+
+      if (window.elementSdk) {
+        window.elementSdk.init({
+          defaultConfig: defaultConfig,
+          onConfigChange: onConfigChange,
+          mapToCapabilities: (config) => ({
+            recolorables: [],
+            borderables: [],
+            fontEditable: undefined,
+            fontSizeable: undefined
+          }),
+          mapToEditPanelValues: (config) => new Map([
+            ["game_title", config.game_title || defaultConfig.game_title],
+            ["reset_button_text", config.reset_button_text || defaultConfig.reset_button_text]
+          ])
+        });
+      }
+
+      // Start game on load
+      document.addEventListener('DOMContentLoaded', () => {
+          nextRound();
+          updateScore();
+      });
+    </script>
+  </body>
+</html>
